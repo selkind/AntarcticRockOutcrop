@@ -22,6 +22,9 @@ class DataDirectoryManager:
     COAST_DIR_NAME = "coastline"
     COAST_SHAPEFILE = "Coastline_high_res_polygon_v7.1.shp"
 
+    OUTCROP_DIR_NAME = "outcrops"
+    OUTCROP_SHAPEFILE = "Landsat_8_Derived_Outcrop_Dataset_2016.shp"
+
     RAW_IMAGES = "raw"
     CORRECTED_IMAGES = "corrected"
     OUTCROP_LABELS = "labels"
@@ -46,6 +49,10 @@ class DataDirectoryManager:
 
         self.coast_zip_path = os.path.join(self.project_dir, self.COAST_ZIP_NAME)
         self.coast_shape_path = os.path.join(self.coast_dir, self.COAST_SHAPEFILE)
+
+        # path to directory where all outcrop shapefile components are saved after extraction 
+        self.outcrop_dir = os.path.join(self.project_dir, self.OUTCROP_DIR_NAME)
+        self.outcrop_shape_path = os.path.join(self.outcrop_dir, self.OUTCROP_SHAPEFILE)
 
     def configure_logger(self):
         logger = logging.getLogger('scene_downloader_log')
@@ -124,28 +131,40 @@ class DataDirectoryManager:
 
     @:param string zip_path: the file path where the supplementary material zipfile is located.
 
-    @:returns string: the absolute file path to the extracted scene id text file
+    @:return string: the absolute file path to the extracted scene id text file
     """
 
-    def extract_scene_id_file(self):
-        scene_dir = "Supplementary Material"
-        scene_file = "Landsat Tile IDs - Differentiating snow and rock in Antarctic.txt"
+    def extract_supplement_files(self):
         if os.path.exists(self.scene_id_file):
             self.logger.info("Scene ID file already extracted at {}".format(self.scene_id_file))
-            return
+        else:
+            self.extract_scene_text_file()
+
+        if os.path.exists(self.outcrop_shape_path):
+            self.logger.info("Outcrop shapefile already extracted at {}".format(
+                self.outcrop_shape_path))
+
+        else:
+            self.extract_outcrop_shapefile()
 
         assert os.path.exists(self.zip_path)
 
+    def extract_scene_text_file(self):
+        scene_dir = "Supplementary Material"
+        scene_file = "Landsat Tile IDs - Differentiating snow and rock in Antarctic.txt"
         with zipfile.ZipFile(self.zip_path) as zf:
             zf.extract(os.path.join(scene_dir, scene_file), self.project_dir)
 
         self.logger.info("Zipfile extracted to {}".format(self.project_dir))
 
         extracted_scene_path = os.path.join(self.project_dir, scene_dir, scene_file)
-
         os.rename(extracted_scene_path, os.path.join(self.project_dir, self.scene_id_file))
 
         self.logger.info("Text file removed from {} and renamed to {}".format(extracted_scene_path, self.scene_id_file))
+
+        #extracted_shapefile_zip_path = os.path.join(self.project_dir, scene_dir, shapefile_zip)
+
+        #self.extract_outcrop_shapefile(extracted_shapefile_zip_path)
 
         path_to_remove = os.path.join(self.project_dir, scene_dir)
 
@@ -155,6 +174,33 @@ class DataDirectoryManager:
 
         os.rmdir(path_to_remove)
         self.logger.info("directory {} removed".format(path_to_remove))
+
+    def extract_outcrop_shapefile(self):
+        shapefile_zip = "Supplementary Material/New rock outcrop map of Antarctica.zip"
+        with zipfile.ZipFile(self.zip_path) as zf:
+            zf.extract(shapefile_zip, self.project_dir)
+        extracted_shp_zip = os.path.join(self.project_dir, shapefile_zip)
+
+        zip_outcrop_dir = "New rock outcrop map of Antarctica"
+        with zipfile.ZipFile(extracted_shp_zip) as shp_zip:
+            shp_zip.extractall(self.outcrop_dir)
+
+        for i in os.listdir(os.path.join(self.outcrop_dir, zip_outcrop_dir)):
+            component = os.path.join(self.outcrop_dir, zip_outcrop_dir, i)
+            os.rename(component, 
+                    os.path.join(self.outcrop_dir, i))
+
+        self.logger.info("all shapefile components renamed {}".format(self.outcrop_dir))
+
+        os.rmdir(os.path.join(self.outcrop_dir, zip_outcrop_dir))
+
+        supp_dir_path = os.path.join(self.project_dir, "Supplementary Material")
+
+        for i in os.listdir(supp_dir_path):
+            os.remove(os.path.join(supp_dir_path, i))
+        os.rmdir(supp_dir_path)
+        self.logger.info("directory cleaned (I hope...)")
+
 
     def extract_coast_shapefile(self):
         if os.path.exists(self.coast_shape_path):
@@ -184,3 +230,9 @@ class DataDirectoryManager:
                 os.mkdir(raw_scene_dir)
             with tarfile.open(scene_tar) as tar:
                 tar.extractall(raw_scene_dir)
+
+if __name__ == "__main__":
+    dm = DataDirectoryManager(os.getcwd() + "/data")
+    dm.download_supplement()
+    dm.extract_supplement_files()
+
