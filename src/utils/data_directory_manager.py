@@ -231,8 +231,3 @@ class DataDirectoryManager:
             with tarfile.open(scene_tar) as tar:
                 tar.extractall(raw_scene_dir)
 
-if __name__ == "__main__":
-    dm = DataDirectoryManager(os.getcwd() + "/data")
-    dm.download_supplement()
-    dm.extract_supplement_files()
-
