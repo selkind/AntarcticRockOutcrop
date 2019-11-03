@@ -12,7 +12,7 @@ from _thread import *
 import threading 
 import matplotlib.pyplot as plt
 import rasterio.plot as rplt
-from progress.bar import Bar
+from progress.bar import FillingSquaresBar
  
 
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     dm.extract_supplement_files() # where we get the sceneID .txt and outcrop .shp
     
     scene_IDs = []
-    scene_IDs = [i["ID"] for i in dm.load_scene_ids()[:31]]
+    scene_IDs = [i["ID"] for i in dm.load_scene_ids()[:30]]
    
     dataFiles = [f for f in listdir(dataPath) if isfile(join(dataPath, f))]
     fName = [i.split(".")[0].replace("'", "") for i in dataFiles] 
@@ -171,7 +171,7 @@ if __name__ == "__main__":
         if not os.path.exists(dirName):
            
             os.mkdir(dirName)
-        with Bar('Processing', max=numChunks*numChunks) as bar:
+        with FillingSquaresBar('Processing', max=numChunks*numChunks) as bar:
             for i in range(0,numChunks):
                 for j in range(0, numChunks):
 #                     print("Chunk ({},{})".format(i, j))
