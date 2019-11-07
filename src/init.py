@@ -17,9 +17,7 @@ from progress.bar import FillingSquaresBar
 
 
 import numpy as np
-dataPath= "data/downloads"
-rawPath = "data/raw"
-stackedPath = "data/stacked_chunks"
+
 
 
 """
@@ -55,29 +53,44 @@ def untar_helper(threadName, scene_IDs, chunkNum, dm, totalThreads):
     return
 
 if __name__ == "__main__":
-    base_dir = os.getcwd()
-    dm = DataDirectoryManager(os.path.join(base_dir,"data"))
-    '''
-    dm.download_supplement() # where we get the zip file
-    '''
-    dm.extract_supplement_files() # where we get the sceneID .txt and outcrop .shp
+    
+    base_dir = "/home/dsa/ant"
+    dm = DataDirectoryManager(base_dir)
+    
+    dm.download_supplement()
+    dm.extract_supplement_files()
+    
+    dataPath= dm.download_dir
+    rawPath = dm.raw_image_dir
+    stackedPath = os.path.join(dm.project_dir, "stacked_chunks")
     
     scene_IDs = []
-    scene_IDs = [i["ID"] for i in dm.load_scene_ids()[:30]]
-   
+    scene_IDs = [i["ID"] for i in dm.load_scene_ids()[:4]]
+    expected_tar_files = [f + ".tar.bz" for f in scene_IDs]
+    
+    # tarred file path have .tar.bz extension so need to use splitext twice
+    tar_files = [os.path.splitext(os.path.splitext(f)[0])[0] 
+                 for f in os.listdir(dm.download_dir)]
+    undownloaded_scenes = [i for i in scene_IDs if i not in tar_files]
+    if undownloaded_scenes:
+        downloader = Downloader(download_dir=dm.download_dir)
+        dl_bands = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11]
+        downloader.download(undownloaded_scenes)
+    
     dataFiles = [f for f in listdir(dataPath) if isfile(join(dataPath, f))]
     fName = [i.split(".")[0].replace("'", "") for i in dataFiles] 
+
     for s in scene_IDs:
         if s not in fName:
             scene_IDs.remove(s)
-
     print("Downloaded SceneIDs: ")
     print(scene_IDs)
+    
+    un_compressed_data = [i for i in os.listdir(dm.raw_image_dir)
+                          if os.path.isdir(os.path.join(dm.raw_image_dir, i))]
+
     #Load Already Compressed Files
-    with open(rawPath+ '/raw_file.txt', 'r') as filehandle:
-        for line in filehandle:
-            item = line[:-1]
-            un_compressed_data.append(item)
+    
     print("Already Untarred Files: ")
     print(un_compressed_data)
     try:
@@ -96,9 +109,9 @@ if __name__ == "__main__":
     except:
        print("Error: unable to start thread")
     #Store Compressed File 
-    with open(rawPath+ '/raw_file.txt', 'w') as filehandle:
-        for listitem in un_compressed_data:
-            filehandle.write('%s\n' % listitem)
+#     with open(rawPath+ '/raw_file.txt', 'w') as filehandle:
+#         for listitem in un_compressed_data:
+#             filehandle.write('%s\n' % listitem)
             
     # After Uncompressing the Images #
     rawFiles = [f for f in listdir(rawPath)]
@@ -153,7 +166,7 @@ if __name__ == "__main__":
         cnt = 0;
         rasters.clear()
         for b in bands:
-            imgName = "data/raw/"+r + "/" + r + "_"+ b + ".TIF"
+            imgName = os.path.join(dm.raw_image_dir, r + "/" + r + "_"+ b + ".TIF")
             raster = plt.imread(imgName)
 #             print(cnt, raster.shape)
             cnt = cnt+1
@@ -191,38 +204,3 @@ if __name__ == "__main__":
         #                 print(cnt, chunk.shape)
                     cnt = cnt +1
                     bar.next()
-            
-         
-
-        
-#     for s in scenes:
-#         scene_IDs.append(s)
-#     print(scene_IDs)
-#     scene_IDs_raw = os.path.join(dm.raw_image_dir, scene_IDs[0])
-#     test_scene_corrected = os.path.join(dm.corrected_image_dir, scene_IDs[0])
-    
-    
-#     print(dm.download_dir)
-    
-#     scene_downloader = Downloader(download_dir=dm.download_dir)
-#     scene_downloader.download(scene_IDs)
-#     
-    
-#     correcter = LandsatTOACorrecter(scene_IDs_raw)
-#     correcter.correct_toa_brightness_temp(dm.corrected_image_dir)
-#     correcter.correct_toa_reflectance(dm.corrected_image_dir)
-    
-#     labeler = OutcropLabeler(test_scene_corrected, coast_shape_file)
-#     labeler.write_mask_file(dir_manager.label_dir)
-# =======
-#     data_dir = os.path.join(base_dir,"data")
-#     manual_dir = "/home/dsa/DSA/images_manual"
-    
-#     dm = DataDirectoryManager(manual_dir)
-# >>>>>>> f8f3292aab92ba89203161b3f1bdf14f78d3a094
-
-#     dm.download_supplement()
-#     dm.extract_scene_id_file()
-    
-#     dm.download_coast_shapefile()
-#     dm.extract_coast_shapefile()
